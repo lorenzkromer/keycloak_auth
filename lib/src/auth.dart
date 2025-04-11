@@ -93,7 +93,6 @@ class KeycloakAuth {
       await updateToken();
     } catch (e, s) {
       _isInitialized = false;
-      _streamController.add(KeycloakAuthState.unauthenticated);
       onError('Failed to initialize plugin.', e, s);
     }
   }
@@ -189,34 +188,43 @@ class KeycloakAuth {
       final isConnected = await hasNetwork();
 
       if (isConnected) {
-        tokenResponse = await APP_AUTH.token(
-          TokenRequest(
-            _keycloakConfig.clientId,
-            _keycloakConfig.redirectUri,
-            issuer: _keycloakConfig.issuer,
-            scopes: _keycloakConfig.scopes,
-            refreshToken: securedRefreshToken,
-            allowInsecureConnections: _keycloakConfig.allowInsecureConnections,
-            clientSecret: _keycloakConfig.clientSecret,
-          ),
-        );
+        try {
+          tokenResponse = await APP_AUTH.token(
+            TokenRequest(
+              _keycloakConfig.clientId,
+              _keycloakConfig.redirectUri,
+              issuer: _keycloakConfig.issuer,
+              scopes: _keycloakConfig.scopes,
+              refreshToken: securedRefreshToken,
+              allowInsecureConnections:
+                  _keycloakConfig.allowInsecureConnections,
+              clientSecret: _keycloakConfig.clientSecret,
+            ),
+          );
 
-        if (tokenResponse.isValid) {
-          if (refreshToken != null) {
-            await SECURE_STORAGE.write(
-              key: REFRESH_TOKEN_KEY,
-              value: refreshToken,
-            );
+          if (tokenResponse.isValid) {
+            if (refreshToken != null) {
+              await SECURE_STORAGE.write(
+                key: REFRESH_TOKEN_KEY,
+                value: refreshToken,
+              );
+            }
+          } else {
+            developer.log('Invalid token response.', name: 'keycloak_auth');
           }
-        } else {
-          developer.log('Invalid token response.', name: 'keycloak_auth');
-        }
 
-        _streamController.add(
-          tokenResponse.isValid
-              ? KeycloakAuthState.authenticated
-              : KeycloakAuthState.unauthenticated,
-        );
+          _streamController.add(
+            tokenResponse.isValid
+                ? KeycloakAuthState.authenticated
+                : KeycloakAuthState.unauthenticated,
+          );
+        } catch (_) {
+          developer.log(
+            'Unable to request new token with refreshToken.',
+            name: 'keycloak_auth',
+          );
+          _streamController.add(KeycloakAuthState.unauthenticated);
+        }
       } else {
         developer.log('No internet connection.', name: 'keycloak_auth');
         _streamController.add(KeycloakAuthState.unavailable);
