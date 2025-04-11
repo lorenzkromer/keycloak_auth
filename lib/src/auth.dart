@@ -4,13 +4,16 @@ part of '../keycloak_auth.dart';
 ///
 /// Provides functionalities for user authentication, token management, and resource authorization.
 class KeycloakAuth {
+  KeycloakAuthState get initialStreamData => KeycloakAuthState.unauthenticated;
+
   static KeycloakAuth? _instance;
 
   bool _isInitialized = false;
 
   final KeycloakConfig _keycloakConfig;
 
-  late final _streamController = StreamController<bool>.broadcast();
+  late final _streamController =
+      StreamController<KeycloakAuthState>.broadcast();
 
   /// Called whenever an error gets caught.
   ///
@@ -39,7 +42,8 @@ class KeycloakAuth {
   /// The stream of the user authentication state.
   ///
   /// Returns true if the user is currently logged in.
-  Stream<bool> get authenticationStream => _streamController.stream;
+  Stream<KeycloakAuthState> get authenticationStream =>
+      _streamController.stream;
 
   /// Returns the id token string.
   ///
@@ -99,6 +103,8 @@ class KeycloakAuth {
   Future<bool> login() async {
     _assertInitialization();
     try {
+      _streamController.add(KeycloakAuthState.pending);
+
       tokenResponse = await APP_AUTH.authorizeAndExchangeCode(
         AuthorizationTokenRequest(
           _keycloakConfig.clientId,
@@ -122,10 +128,15 @@ class KeycloakAuth {
         developer.log('Invalid token response.', name: 'keycloak_auth');
       }
 
-      _streamController.add(tokenResponse.isValid);
+      _streamController.add(
+        tokenResponse.isValid
+            ? KeycloakAuthState.authenticated
+            : KeycloakAuthState.unauthenticated,
+      );
       return tokenResponse.isValid;
     } catch (e, s) {
       onError('Failed to login.', e, s);
+      _streamController.add(KeycloakAuthState.unauthenticated);
       return false;
     }
   }
@@ -136,6 +147,8 @@ class KeycloakAuth {
   Future<bool> logout() async {
     _assertInitialization();
     try {
+      _streamController.add(KeycloakAuthState.pending);
+
       final request = EndSessionRequest(
         idTokenHint: idToken,
         issuer: _keycloakConfig.issuer,
@@ -146,28 +159,31 @@ class KeycloakAuth {
       await APP_AUTH.endSession(request);
       await SECURE_STORAGE.deleteAll();
       tokenResponse = null;
-      _streamController.add(false);
+      _streamController.add(KeycloakAuthState.unauthenticated);
       return true;
     } catch (e, s) {
       onError('Failed to logout.', e, s);
+      _streamController.add(KeycloakAuthState.authenticated);
       return false;
     }
   }
 
   /// Requests a new access token if it expires within the given duration.
   Future<void> updateToken([Duration? duration]) async {
+    _streamController.add(KeycloakAuthState.pending);
+
     final securedRefreshToken = await SECURE_STORAGE.read(
       key: REFRESH_TOKEN_KEY,
     );
 
     if (securedRefreshToken == null) {
       developer.log('No refresh token found.', name: 'keycloak_auth');
-      _streamController.add(false);
+      _streamController.add(KeycloakAuthState.unauthenticated);
     } else if (JWT
         .decode(securedRefreshToken)
         .willExpired(duration ?? Duration.zero)) {
       developer.log('Expired refresh token', name: 'keycloak_auth');
-      _streamController.add(false);
+      _streamController.add(KeycloakAuthState.unauthenticated);
     } else {
       final isConnected = await hasNetwork();
 
@@ -195,10 +211,14 @@ class KeycloakAuth {
           developer.log('Invalid token response.', name: 'keycloak_auth');
         }
 
-        _streamController.add(tokenResponse.isValid);
+        _streamController.add(
+          tokenResponse.isValid
+              ? KeycloakAuthState.authenticated
+              : KeycloakAuthState.unauthenticated,
+        );
       } else {
         developer.log('No internet connection.', name: 'keycloak_auth');
-        _streamController.add(true);
+        _streamController.add(KeycloakAuthState.unavailable);
       }
     }
   }

@@ -15,3 +15,4 @@ part 'src/constants.dart';
 part 'src/helpers.dart';
 part 'src/jwt.dart';
 part 'src/auth.dart';
+part 'src/enum.dart';

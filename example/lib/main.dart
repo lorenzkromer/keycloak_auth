@@ -32,17 +32,18 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) => MaterialApp(
     scaffoldMessengerKey: scaffoldMessengerKey,
     // Listen to the user authentication stream.
-    home: StreamBuilder<bool>(
-      initialData: false,
+    home: StreamBuilder<KeycloakAuthState>(
+      initialData: keycloakAuth.initialStreamData,
       stream: keycloakAuth.authenticationStream,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
+        debugPrint(snapshot.toString());
+        if (snapshot.connectionState == ConnectionState.waiting ||
+            snapshot.data == KeycloakAuthState.pending) {
           return const LoadingScreen();
-        } else if (snapshot.data!) {
+        } else if (snapshot.data == KeycloakAuthState.authenticated) {
           return const HomeScreen();
-        } else {
-          return const LoginScreen();
         }
+        return const LoginScreen();
       },
     ),
   );
