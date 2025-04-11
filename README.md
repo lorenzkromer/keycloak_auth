@@ -1,10 +1,6 @@
 
 # keycloak_auth
 
-[![Pub](https://img.shields.io/pub/v/keycloak_auth)](https://pub.dev/packages/keycloak_auth)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-<!--  If you have a CI:  [![Build Status](your_ci_badge_url)]() -->
-
 A Flutter package for easy Keycloak authentication, based on the OAuth 2.0 Authorization Code Flow.
 
 This package is a fork of [`keycloak_wrapper`](https://pub.dev/packages/keycloak_wrapper) and leverages [`flutter_appauth`](https://pub.dev/packages/flutter_appauth) to implement the OAuth 2.0 Authorization Code Flow as a client. This enables secure and standards-compliant authentication against Keycloak servers.
