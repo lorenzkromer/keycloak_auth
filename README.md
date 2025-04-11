@@ -210,7 +210,7 @@ Contributions are welcome! Please create a pull request with your changes.
 
 ## License
 
-This package is licensed under the [MIT License](LICENSE).
+This package is licensed under the [MIT License](LICENSE) and [BSD 3-Clause License](LICENSE).
 
 ## Acknowledgments
 
