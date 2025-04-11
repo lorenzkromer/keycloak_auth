@@ -93,6 +93,7 @@ class KeycloakAuth {
       await updateToken();
     } catch (e, s) {
       _isInitialized = false;
+      _streamController.add(KeycloakAuthState.unauthenticated);
       onError('Failed to initialize plugin.', e, s);
     }
   }
